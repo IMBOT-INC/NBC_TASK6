@@ -19,21 +19,59 @@ void ATaskGameModeBase::BeginPlay()
 void ATaskGameModeBase::PrintChatMessageString(ATaskPlayerController* InChattingPlayerController,
 		const FString& InChatMessageString)
 {
-	const FString GuessNumberString = InChatMessageString.Right(3);
-	if (IsGuessNumberString(GuessNumberString) == true)
+	if (IsValid(InChattingPlayerController) == false)
 	{
+		return;
+	}
+
+	ATaskPlayerState* ChattingPlayerState =
+		InChattingPlayerController->GetPlayerState<ATaskPlayerState>();
+	if (IsValid(ChattingPlayerState) == false)
+	{
+		return;
+	}
+
+	const FString GuessNumberString = InChatMessageString.TrimStartAndEnd();
+	bool bContainsOnlyDigits = GuessNumberString.IsEmpty() == false;
+	for (const TCHAR Character : GuessNumberString)
+	{
+		if (FChar::IsDigit(Character) == false)
+		{
+			bContainsOnlyDigits = false;
+			break;
+		}
+	}
+
+	const bool bIsValidGuess = IsGuessNumberString(GuessNumberString);
+	if (bContainsOnlyDigits == true && bIsValidGuess == false)
+	{
+		InChattingPlayerController->ClientRPCPrintChatMessageString(
+			TEXT("Invalid guess: enter 3 different digits from 1 to 9."));
+		return;
+	}
+
+	if (bIsValidGuess == true)
+	{
+		if (ChattingPlayerState->CurrentGuessCount >= ChattingPlayerState->MaxGuessCount)
+		{
+			InChattingPlayerController->ClientRPCPrintChatMessageString(
+				ChattingPlayerState->GetPlayerInfoString() + TEXT(": No Change (gueess)."));
+			return;
+		}
+
 		const FString JudgeResultString = JudgeResult(GuessNumberString, SecretNumberString);
 		UE_LOG(LogTemp, Warning, TEXT("Secret: [%s], Guess: [%s], Result: [%s]"),
 			*SecretNumberString, *GuessNumberString, *JudgeResultString);
 		IncreaseGuessCount(InChattingPlayerController);
 		const int32 StrikeCount = FCString::Atoi(*JudgeResultString.Left(1));
+		const FString CombinedMessageString = ChattingPlayerState->GetPlayerInfoString()
+			+ TEXT(": ") + GuessNumberString + TEXT(" -> ") + JudgeResultString;
 
 		for (TActorIterator<ATaskPlayerController> It(GetWorld()); It; ++It)
 		{
 			ATaskPlayerController* TaskPlayerController = *It;
 			if (IsValid(TaskPlayerController) == true)
 			{
-				FString CombinedMessageString = InChatMessageString + TEXT(" -> ") + JudgeResultString;
 				TaskPlayerController->ClientRPCPrintChatMessageString(CombinedMessageString);
 			}
 		}
@@ -42,12 +80,15 @@ void ATaskGameModeBase::PrintChatMessageString(ATaskPlayerController* InChatting
 	}
 	else
 	{
+		const FString CombinedMessageString = ChattingPlayerState->GetPlayerInfoString()
+			+ TEXT(": ") + InChatMessageString;
+
 		for (TActorIterator<ATaskPlayerController> It(GetWorld()); It; ++It)
 		{
 			ATaskPlayerController* TaskPlayerController = *It;
 			if (IsValid(TaskPlayerController) == true)
 			{
-				TaskPlayerController->ClientRPCPrintChatMessageString(InChatMessageString);
+				TaskPlayerController->ClientRPCPrintChatMessageString(CombinedMessageString);
 			}
 		}
 	}

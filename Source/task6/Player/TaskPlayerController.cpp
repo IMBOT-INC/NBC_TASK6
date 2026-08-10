@@ -49,21 +49,12 @@ void ATaskPlayerController::BeginPlay()
 
 void ATaskPlayerController::SetChatMessageString(const FString& InChatMessageString)
 {
-		ChatMessageString = InChatMessageString;
-	
-		if (IsLocalController() == true)
-		{
-			// ServerRPCPrintChatMessageString(InChatMessageString);
+	ChatMessageString = InChatMessageString;
 
-			ATaskPlayerState* TaskPS = GetPlayerState<ATaskPlayerState>();
-			if (IsValid(TaskPS) == true)
-			{
-				// FString CombinedMessageString = TaskPS->PlayerNameString + TEXT(": ") + InChatMessageString;
-				FString CombinedMessageString = TaskPS->GetPlayerInfoString() + TEXT(": ") + InChatMessageString;
-
-				ServerRPCPrintChatMessageString(CombinedMessageString);
-			}
-		}
+	if (IsLocalController() == true)
+	{
+		ServerRPCPrintChatMessageString(InChatMessageString);
+	}
 }
 
 void ATaskPlayerController::PrintChatMessageString(const FString& InChatMessageString)
