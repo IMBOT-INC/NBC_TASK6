@@ -1,16 +1,16 @@
-﻿#include "Components/EditableTextBox.h"
-#include "task6/Player/TaskPlayerController.h"
-
-
-
+﻿
 
 #include "TaskChatInput.h"
+#include "Components/EditableTextBox.h"
+#include "task6/Player/TaskPlayerController.h"
+
 
 	
 
 void UTaskChatInput::NativeConstruct()
 {
 	Super::NativeConstruct();
+	EditableTextBox_ChatInput->SetClearKeyboardFocusOnCommit(false);
 
 	if (EditableTextBox_ChatInput->OnTextCommitted.IsAlreadyBound(this, &ThisClass::OnChatInputTextCommitted) == false)
 	{

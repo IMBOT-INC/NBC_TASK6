@@ -19,13 +19,28 @@ public:
 	virtual void BeginPlay() override;
 	void SetChatMessageString(const FString& InChatMessageString);
 	void PrintChatMessageString(const FString& InChatMessageString);
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
+	
+	UFUNCTION(Client, Reliable)
+		void ClientRPCPrintChatMessageString(const FString& InChatMessageString);
+
+	UFUNCTION(Server, Reliable)
+		void ServerRPCPrintChatMessageString(const FString& InChatMessageString);
+public:
+	UPROPERTY(Replicated, BlueprintReadOnly)
+		FText NotificationText;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly)
 		TSubclassOf<UTaskChatInput> ChatInputWidgetClass;
 	UPROPERTY()
 		TObjectPtr<UTaskChatInput> ChatInputWidgetInstance;
+	UPROPERTY(EditDefaultsOnly)
+		TSubclassOf<UUserWidget> NotificationTextWidgetClass;
+	UPROPERTY()
+		TObjectPtr<UUserWidget> NotificationTextWidgetInstance;
+	
 protected:
 	FString ChatMessageString;
 

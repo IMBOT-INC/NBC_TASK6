@@ -3,10 +3,17 @@
 
 #include "TaskPlayerController.h"
 
+#include "EngineUtils.h"
+#include "TaskPlayerState.h"
 #include "Blueprint/UserWidget.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
 #include "task6/task6.h"
+#include "task6/Game/TaskGameModeBase.h"
 #include "task6/UI/TaskChatInput.h"
+
+class ATaskPlayerState;
 
 void ATaskPlayerController::test()
 {
@@ -20,6 +27,15 @@ void ATaskPlayerController::BeginPlay()
 	{
 		return;
 	}
+	if (IsValid(NotificationTextWidgetClass) == true)
+	{
+		NotificationTextWidgetInstance = CreateWidget<UUserWidget>(this, NotificationTextWidgetClass);
+		if (IsValid(NotificationTextWidgetInstance) == true)
+		{
+			NotificationTextWidgetInstance->AddToViewport();
+		}
+	}
+	
 	FInputModeUIOnly InputModeUIOnly;
 	SetInputMode(InputModeUIOnly);
 	
@@ -33,9 +49,21 @@ void ATaskPlayerController::BeginPlay()
 
 void ATaskPlayerController::SetChatMessageString(const FString& InChatMessageString)
 {
-	ChatMessageString = InChatMessageString;
-	PrintChatMessageString(ChatMessageString);
+		ChatMessageString = InChatMessageString;
+	
+		if (IsLocalController() == true)
+		{
+			// ServerRPCPrintChatMessageString(InChatMessageString);
 
+			ATaskPlayerState* TaskPS = GetPlayerState<ATaskPlayerState>();
+			if (IsValid(TaskPS) == true)
+			{
+				// FString CombinedMessageString = TaskPS->PlayerNameString + TEXT(": ") + InChatMessageString;
+				FString CombinedMessageString = TaskPS->GetPlayerInfoString() + TEXT(": ") + InChatMessageString;
+
+				ServerRPCPrintChatMessageString(CombinedMessageString);
+			}
+		}
 }
 
 void ATaskPlayerController::PrintChatMessageString(const FString& InChatMessageString)
@@ -45,4 +73,43 @@ void ATaskPlayerController::PrintChatMessageString(const FString& InChatMessageS
 	// FString CombinedMessageString = FString::Printf(TEXT("%s: %s"), *NetModeString, *InChatMessageString);
 		Task6FunctionLibrary::MyPrintString(this, InChatMessageString, 10.f);
 
+}
+
+void ATaskPlayerController::GetLifetimeReplicatedProps(
+		TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ThisClass, NotificationText);
+}
+
+
+void ATaskPlayerController::ServerRPCPrintChatMessageString_Implementation(
+		const FString& InChatMessageString)
+{
+	// for (TActorIterator<ACXPlayerController> It(GetWorld()); It; ++It)
+	// {
+	// 	ACXPlayerController* CXPlayerController = *It;
+	// 	if (IsValid(CXPlayerController) == true)
+	// 	{
+	// 		CXPlayerController->ClientRPCPrintChatMessageString(InChatMessageString);
+	// 	}
+	// }
+
+	AGameModeBase* GM = UGameplayStatics::GetGameMode(this);
+	if (IsValid(GM) == true)
+	{
+		ATaskGameModeBase* TaskGM = Cast<ATaskGameModeBase>(GM);
+		if (IsValid(TaskGM) == true)
+		{
+			TaskGM->PrintChatMessageString(this, InChatMessageString);
+		}
+	}
+
+
+}
+
+void ATaskPlayerController::ClientRPCPrintChatMessageString_Implementation(
+		const FString& InChatMessageString)
+{
+	PrintChatMessageString(InChatMessageString);
 }
